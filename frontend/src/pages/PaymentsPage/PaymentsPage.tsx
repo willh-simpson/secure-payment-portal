@@ -1,4 +1,3 @@
-import React from 'react';
 import { HttpPaymentsRepository } from '../../repositories/payments.repository.http';
 import { PaymentForm } from '../../features/payments/ui/PaymentForm/PaymentForm';
 

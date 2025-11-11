@@ -13,9 +13,11 @@ function App() {
                 <Route
                     path="/"
                     element={
-                        <div style={{ padding: 20 }}>
-                            <h1>Home</h1>
-                        </div>
+                        <>
+                            <div style={{ padding: 20 }}>
+                                <h1>Home</h1>
+                            </div>
+                        </>
                     }
                 />
                 <Route path="/payments" element={<PaymentsPage />} />

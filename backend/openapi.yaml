@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: Secure Payment Portal API
+  version: 0.1.0
+paths:
+  /payments:
+    post:
+      summary: Create a payment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaymentCreate"
+      responses:
+        "201":
+          description: Payment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /payments/{id}/confirm:
+    post:
+      summary: Confirm a payment (MFA)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mfaCode:
+                  type: string
+      responses:
+        "200":
+          description: Payment confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+        "401":
+          description: MFA required/invalid
+  /payments/{id}:
+    get:
+      summary: Get a payment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Payment retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentResponse"
+components:
+  schemas:
+    PaymentCreate:
+      type: object
+      required: [fromAccount, toAccount, amount, currency]
+      properties:
+        idempotencyKey: { type: string }
+        fromAccount: { type: string }
+        toAccount: { type: string }
+        amount: { type: string } # match frontend payload, avoid floating-point rounding errors
+        currency: { type: string }
+        memo: { type: string }
+    PaymentResponse:
+      type: object
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [pending, confirmed, failed] }
+        amount: { type: string }
+        currency: { type: string }
+        createdAt: { type: string, format: date-time }
+        requiresMfa: { type: boolean }
+        mfaToken: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid input

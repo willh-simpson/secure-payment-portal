@@ -1,14 +1,16 @@
 package com.wills.payments.api.controller;
 
+import com.wills.payments.application.exception.MfaException;
+import com.wills.payments.application.exception.PaymentException;
 import com.wills.payments.application.service.PaymentService;
+import com.wills.payments.domain.dto.PaymentConfirmRequest;
 import com.wills.payments.domain.dto.PaymentCreate;
+import com.wills.payments.domain.dto.PaymentErrorResponse;
 import com.wills.payments.domain.dto.PaymentResponse;
 import com.wills.payments.domain.model.Payment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 //@RequestMapping("/api")
@@ -23,20 +25,22 @@ public class PaymentController {
     public ResponseEntity<PaymentResponse> create(@Validated @RequestBody PaymentCreate req) {
         PaymentResponse res = service.create(req);
 
-        return ResponseEntity.status(res.requiresMfa() ? 202: 201)
+        return ResponseEntity.status(res.requiresMfa() ? 202 : 201)
                 .body(res);
     }
 
     @PutMapping("/payments/{id}/confirm")
-    public ResponseEntity<PaymentResponse> confirm(@PathVariable String id, @RequestBody Map<String, String> body) {
-        String mfaToken = body.get("mfaToken");
+    public ResponseEntity<?> confirm(@PathVariable String id, @RequestBody(required = false) PaymentConfirmRequest req) {
+        String mfaToken = req != null ? req.mfaToken() : null;
 
         try {
             PaymentResponse res = service.confirm(id, mfaToken);
 
             return ResponseEntity.ok(res);
-        } catch (Exception e) {
-            return ResponseEntity.status(401).build();
+        } catch (PaymentException e) {
+            return ResponseEntity.status(404).body(new PaymentErrorResponse(e.getMessage()));
+        } catch (MfaException e) {
+            return ResponseEntity.status(401).body(new PaymentErrorResponse(e.getMessage()));
         }
     }
 

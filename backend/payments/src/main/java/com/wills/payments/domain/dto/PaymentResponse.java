@@ -8,7 +8,6 @@ public record PaymentResponse(
         String amount,
         String currency,
         String createdAt,
-        boolean requiresMfa,
-        String mfaToken
+        boolean requiresMfa
 ) {
 }

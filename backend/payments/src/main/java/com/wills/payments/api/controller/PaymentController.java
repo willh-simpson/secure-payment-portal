@@ -13,7 +13,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-//@RequestMapping("/api")
 public class PaymentController {
     private final PaymentService service;
 
@@ -31,7 +30,7 @@ public class PaymentController {
 
     @PutMapping("/payments/{id}/confirm")
     public ResponseEntity<?> confirm(@PathVariable String id, @RequestBody(required = false) PaymentConfirmRequest req) {
-        String mfaToken = req != null ? req.mfaToken() : null;
+        String mfaToken = req != null ? req.mfaCode() : null;
 
         try {
             PaymentResponse res = service.confirm(id, mfaToken);

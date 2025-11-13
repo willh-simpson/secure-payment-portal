@@ -4,6 +4,6 @@ import jakarta.validation.constraints.NotBlank;
 
 public record PaymentConfirmRequest(
         @NotBlank(message = "Multi-Factor Authentication code must be provided when required")
-        String mfaToken
+        String mfaCode
 ) {
 }

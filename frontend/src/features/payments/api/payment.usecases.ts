@@ -60,3 +60,16 @@ export const confirmPaymentUseCase = (repo: PaymentsRepository) => {
         return Results.ok(result.data);
     };
 };
+
+// for demo purposes only
+export const getSecret = (repo: PaymentsRepository) => {
+    return async (paymentId: string) => {
+        const result = await repo.getSecret(paymentId);
+
+        if (Results.isError(result)) {
+            return Results.fail(result.error);
+        }
+
+        return Results.ok(result.data);
+    };
+};

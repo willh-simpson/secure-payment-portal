@@ -9,4 +9,7 @@ export interface PaymentsRepository {
     confirm(paymentId: string, mfaCode: string): Promise<Result<Payment>>;
 
     getById(id: string): Promise<Result<Payment | null>>;
+
+    // demo purposes only
+    getSecret(paymentId: string): Promise<Result<Map<string, string>>>;
 }

@@ -63,7 +63,7 @@ export class HttpPaymentsRepository implements PaymentsRepository {
 
     async confirm(paymentId: string, mfaCode: string): Promise<Result<Payment>> {
         try {
-            const res = await this.client.post<ApiPaymentResponse>(
+            const res = await this.client.put<ApiPaymentResponse>(
                 `/payments/${paymentId}/confirm`,
                 {
                     mfaCode,
@@ -85,6 +85,17 @@ export class HttpPaymentsRepository implements PaymentsRepository {
         } catch (err) {
             console.error('API call failed', err);
             return { success: false, error: 'Payment not found' };
+        }
+    }
+
+    async getSecret(paymentId: string): Promise<Result<Map<string, string>>> {
+        try {
+            const res = await this.client.get<Map<string, string>>(`/mfa/secret/${paymentId}`);
+
+            return { success: true, data: res.data };
+        } catch (err) {
+            console.error('MFA call failed', err);
+            return { success: false, error: 'Could not retrieve MFA secret' };
         }
     }
 }

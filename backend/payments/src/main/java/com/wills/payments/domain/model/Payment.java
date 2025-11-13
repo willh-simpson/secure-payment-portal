@@ -1,10 +1,12 @@
 package com.wills.payments.domain.model;
 
+import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Getter
 public class Payment {
     private final String id;
     private final String fromAccount;
@@ -16,6 +18,9 @@ public class Payment {
     private final LocalDateTime createdAt;
     @Setter
     private String memo;
+
+    @Setter
+    private String mfaSecret; // this should be moved to User class once users are implemented
 
     public static final double MFA_THRESHOLD = 1000.0;
 
@@ -36,37 +41,5 @@ public class Payment {
         }
 
         return this.status = PaymentStatus.CONFIRMED;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public String getFromAccount() {
-        return fromAccount;
-    }
-
-    public String getToAccount() {
-        return toAccount;
-    }
-
-    public double getAmount() {
-        return amount;
-    }
-
-    public String getCurrency() {
-        return currency;
-    }
-
-    public PaymentStatus getStatus() {
-        return status;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public String getMemo() {
-        return memo;
     }
 }

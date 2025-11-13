@@ -53,7 +53,6 @@ public class PaymentServiceTest {
         PaymentResponse res = service.create(req);
 
         assertTrue(res.requiresMfa());
-        assertNotNull(res.mfaToken());
     }
 
     @Test

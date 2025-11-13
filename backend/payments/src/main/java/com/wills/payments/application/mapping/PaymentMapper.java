@@ -15,15 +15,14 @@ public class PaymentMapper {
         );
     }
 
-    public static PaymentResponse toResponse(Payment payment, boolean requiresMfa, String mfaToken) {
+    public static PaymentResponse toResponse(Payment payment, boolean requiresMfa) {
         return new PaymentResponse(
                 payment.getId(),
                 payment.getStatus(),
                 String.valueOf(payment.getAmount()),
                 payment.getCurrency(),
                 payment.getCreatedAt().toString(),
-                requiresMfa,
-                mfaToken
+                requiresMfa
         );
     }
 }

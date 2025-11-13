@@ -1,39 +1,45 @@
 import React, { useState } from 'react';
 import type { PaymentsRepository } from '../../../../repositories/payments.repository';
-import { paymentFormSchema, type PaymentFormValues } from '../../schemas/payment';
+import { paymentFormSchema } from '../../schemas/payment';
+import { MfaModal } from '../MfaModal/MfaModal';
 
 type Props = {
     repo: PaymentsRepository;
 };
 
+const maxAmount: number = 99999.99;
+
 export const PaymentForm: React.FC<Props> = ({ repo }) => {
     const [fromAccount, setFromAccount] = useState('');
     const [toAccount, setToAccount] = useState('');
-    const [amount, setAmount] = useState<number>(0);
+    const [amount, setAmount] = useState('');
     const [memo, setMemo] = useState('');
 
     const [loading, setLoading] = useState(false);
 
     const [error, setError] = useState<string | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
-
+    const [mfaError, setMfaError] = useState('');
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+    const [showMfaModal, setShowMfaModal] = useState(false);
+    const [pendingPaymentId, setPendingPaymentId] = useState<string | null>(null);
 
     const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
 
         // validate form input
-        const formValues: PaymentFormValues = {
+        const formValues = {
             fromAccount,
             toAccount,
-            amount: typeof amount === 'string' ? Number(amount) : amount,
+            amount,
             memo,
         };
 
-        const result = paymentFormSchema.safeParse(formValues);
-        if (!result.success) {
+        const validationResult = paymentFormSchema.safeParse(formValues);
+        if (!validationResult.success) {
             const fieldErrors: Record<string, string> = {};
-            result.error.issues.forEach((issue) => {
+            validationResult.error.issues.forEach((issue) => {
                 if (issue.path[0]) fieldErrors[issue.path[0].toString()] = issue.message;
             });
             setErrors(fieldErrors);
@@ -44,6 +50,7 @@ export const PaymentForm: React.FC<Props> = ({ repo }) => {
         setErrors({});
         setLoading(true);
 
+        // send payment information to backend after it has been validated
         try {
             const idempotencyKey = crypto.randomUUID?.() ?? `${Date.now()}`;
             const createUseCase = (await import('../../api/payment.usecases')).createPaymentUseCase(
@@ -52,26 +59,66 @@ export const PaymentForm: React.FC<Props> = ({ repo }) => {
             const result = await createUseCase({
                 fromAccount,
                 toAccount,
-                amount,
+                amount: parseFloat(amount),
                 currency: 'USD', // add multiple currencies later
                 memo,
                 idempotencyKey,
             });
 
             if (result.success) {
-                if (result.data.requiresMfa) {
-                    setSuccessMsg(
-                        `Multi-Factor Authentication required. Token: ${result.data.mfaToken}`
-                    );
-                    // TODO: open mfa modal, call confirm usecase
+                const payment = result.data;
+
+                if (payment.requiresMfa) {
+                    setPendingPaymentId(payment.payment.id);
+                    setShowMfaModal(true);
+
+                    try {
+                        // fetch secret. only for demo purposes
+                        const getSecretUseCase = (
+                            await import('../../api/payment.usecases')
+                        ).getSecret(repo);
+
+                        if (payment.payment.id) {
+                            const result = await getSecretUseCase(payment.payment.id);
+                            console.log(result);
+                        }
+                    } catch (error: any) {
+                        setError(error?.message || 'Failed to retrieve secret');
+                    }
                 } else {
-                    setSuccessMsg('Payment created successfully');
+                    setSuccessMsg('Payment completed successfully');
                 }
             } else {
-                setError('Payment failed. Try again.');
+                setError('Payment failed. Try again');
             }
         } catch (err: any) {
-            setError(err?.message ?? 'Payment failed. Try again.');
+            setError(err?.message ?? 'Payment failed. Try again');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleConfirmMfa = async (code: string) => {
+        if (!pendingPaymentId) return;
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const confirmUseCase = (
+                await import('../../api/payment.usecases')
+            ).confirmPaymentUseCase(repo);
+            const result = await confirmUseCase(pendingPaymentId, code);
+
+            if (result.success) {
+                setSuccessMsg('Payment confirmed successfully');
+                setShowMfaModal(false);
+                setPendingPaymentId(null);
+            } else {
+                setMfaError('Invalid code');
+            }
+        } catch (err: any) {
+            setError(err?.message || 'Failed to confirm payment');
         } finally {
             setLoading(false);
         }
@@ -148,8 +195,17 @@ export const PaymentForm: React.FC<Props> = ({ repo }) => {
                                     id="amount"
                                     className={`no-spinner border p-2 rounded text-base w-full pr-40 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.amount ? 'border-red-500' : 'border-gray-300 dark:border-gray-600'}`}
                                     type="number"
+                                    placeholder="00000.00"
+                                    inputMode="decimal"
+                                    max={maxAmount}
+                                    step=".01"
                                     value={amount}
-                                    onChange={(event) => setAmount(parseFloat(event.target.value))}
+                                    onChange={(event) => {
+                                        const value = event.target.value;
+
+                                        if (parseFloat(value) > maxAmount) return;
+                                        setAmount(value);
+                                    }}
                                 />
 
                                 {errors.amount && (
@@ -207,6 +263,15 @@ export const PaymentForm: React.FC<Props> = ({ repo }) => {
                     </p>
                 </div>
             )}
+
+            <MfaModal
+                open={showMfaModal}
+                onClose={() => setShowMfaModal(false)}
+                onSubmit={handleConfirmMfa}
+                errorMsg={mfaError}
+                clearErrorMsg={() => setMfaError('')}
+                loading={loading}
+            />
         </>
     );
 };
